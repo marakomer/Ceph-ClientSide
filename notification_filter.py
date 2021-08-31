@@ -36,7 +36,7 @@ secret_key = 'h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q=='
 
 # Create new Kafka consumer to listen to the message from Ceph
 consumer = KafkaConsumer(
-    "topic_name",
+    'topic_name',
     bootstrap_servers=endpoint,
     auto_offset_reset='earliest',
     enable_auto_commit=True,
