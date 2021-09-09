@@ -1,11 +1,8 @@
 #!/usr/bin/python
 import boto3
 import sys
-from urllib.parse import urlparse
-from botocore.client import Config
 from json import loads
 from kafka import KafkaConsumer
-from kafka.admin import KafkaAdminClient, NewTopic
 import topic_test
 
 
