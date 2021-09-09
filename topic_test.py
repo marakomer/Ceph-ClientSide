@@ -37,6 +37,7 @@ def main():
     # this is standard AWS services call, using custom attributes to add Kafka endpoint information to the topic
     ans = client.create_topic(Name="Kafka_Broker", Attributes={"push-endpoint": 'kafka://127.0.0.1'})
 
-    return ans
+    return ans, topic_name
+
 
 print(main())

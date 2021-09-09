@@ -9,53 +9,51 @@ from kafka.admin import KafkaAdminClient, NewTopic
 import topic_test
 
 
-def put_object(message):
-    region = message['awsRegion']
-    account_id = message['id']
-    resource = '*'  # Not sure about this
-    bucket_name = message['s3']['bucket']['name']
-    filename = ""  # Where is it?
-    client = boto3.client(f'arn:aws:s3:{region}:{account_id}:accesspoint/{resource}')
-    #  Save to S3
-    ans = client.upload_file(Filename=filename, Bucket=bucket_name,
-                             Key=filename)
-    if ans:
-        print(f'Object {filename} put in {bucket_name} successfully')
+if len(sys.argv) != 4:
+    print('Usage: ' + sys.argv[0] + ' <bucket> <filename>')
+    sys.exit(1)
 
-
-topic_conf_list = [{'Id': 'shtut',
-                    'TopicArn': topic_test.main(),
-                    'Events': ['s3:ObjectSynced:*'],
-                    }]
+# bucket name as first argument
+bucketname = sys.argv[1]
+# Name of file to be uploaded
+filename = sys.argv[2]
 
 # endpoint and keys from vstart
 endpoint = 'http://127.0.0.1:8000'
 access_key = '0555b35654ad1656d804'
 secret_key = 'h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q=='
 
+client = boto3.client('s3',
+                      endpoint_url=endpoint,
+                      aws_access_key_id=access_key,
+                      aws_secret_access_key=secret_key)
 
-# Create new Kafka consumer to listen to the message from Ceph
-consumer = KafkaConsumer(
-    'topic_name',
-    bootstrap_servers=endpoint,
-    auto_offset_reset='earliest',
-    enable_auto_commit=True,
-    group_id=0xF000,
-    value_deserializer=lambda x: loads(x.decode('utf-8')))
+info = topic_test.main()
 
-print(consumer)
+notification_conf = [{'Id': 'shtut',
+                      'TopicArn': info[0],
+                      'Events': ['s3:ObjectSynced:*']
+                      }]
 
-consumer_list = [message.value for message in consumer]
+print(client.put_bucket_notification_configuration(Bucket=bucketname,
+                                                   NotificationConfiguration={
+                                                       'TopicConfigurations': notification_conf}))
 
 # Put objects to the relevant bucket
-for message in consumer_list:
-    put_object(message)
+ans = client.upload_file(Filename=filename, Bucket=bucketname,
+                         Key=filename)
 
+if ans:
+    # Create new Kafka consumer to listen to the message from Ceph
+    consumer = KafkaConsumer(
+        info[1],
+        bootstrap_servers=endpoint,
+        value_deserializer=lambda x: loads(x))
 
+    consumer_list = [message.value for message in consumer]
 
-# regex filter on the object name and metadata based filtering are extension to AWS S3 API
-# bucket and topic should be created beforehand
+    print(consumer_list)
 
-
-
-
+    for message in consumer_list:
+        if message['s3']['bucket']['name'] == bucketname and message['object']['key'] == filename:
+            print(f'Object {filename} put in {bucketname} successfully')
