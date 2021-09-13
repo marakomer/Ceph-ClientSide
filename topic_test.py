@@ -6,17 +6,15 @@ from botocore.client import Config
 
 
 def main():
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         # topic name as first argument
         topic_name = sys.argv[1]
         # region name as second argument
         region_name = sys.argv[2]
-    elif len(sys.argv) == 2:
-        # topic name as first argument
-        topic_name = sys.argv[1]
-        region_name = ""
+        # push_endpoint as third argument
+        push_endpoint = sys.argv[3]
     else:
-        print('Usage: ' + sys.argv[0] + ' <topic name> [region name]')
+        print('Usage: ' + sys.argv[0] + ' <topic name> <region name> <kafka endpoint>')
         sys.exit(1)
 
     # endpoint and keys from vstart
@@ -35,9 +33,9 @@ def main():
     # radosgw-admin realm zonegroup list
 
     # this is standard AWS services call, using custom attributes to add Kafka endpoint information to the topic
-    ans = client.create_topic(Name="Kafka_Broker", Attributes={"push-endpoint": 'kafka://127.0.0.1'})
+    ans = client.create_topic(Name="Kafka_Broker", Attributes={"push-endpoint": push_endpoint})
 
-    return ans, topic_name
+    return ans, topic_name, push_endpoint
 
 
 print(main())
