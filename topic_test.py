@@ -38,4 +38,4 @@ def main():
     return ans, topic_name, push_endpoint
 
 
-print(main())
+main()
