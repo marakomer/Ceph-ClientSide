@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from json import dumps
 from kafka import KafkaProducer
-import topic_test
 
 # endpoint and keys from vstart
 endpoint = 'http://127.0.0.1:8000'
@@ -12,8 +11,7 @@ producer = KafkaProducer(bootstrap_servers=endpoint,
                          value_serializer=lambda x:
                          dumps(x))
 
-info = topic_test.main()
-
+push_endpoint = ''
 data = {
     "eventVersion": "2.1",
     "eventSource": "aws:s3",
@@ -43,4 +41,4 @@ data = {
     "opaqueData": "564"
 }
 
-producer.send(info[0], data)
+producer.send(push_endpoint, data)
