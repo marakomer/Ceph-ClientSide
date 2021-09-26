@@ -3,7 +3,7 @@ from json import dumps
 from kafka import KafkaProducer
 
 # endpoint and keys from vstart
-endpoint = 'http://127.0.0.1:8000'
+endpoint = '127.0.0.1:8000'
 access_key = '0555b35654ad1656d804'
 secret_key = 'h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q=='
 

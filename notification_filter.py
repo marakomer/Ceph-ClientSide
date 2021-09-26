@@ -23,12 +23,12 @@ s3_client = boto3.client('s3',
                          aws_access_key_id=access_key,
                          aws_secret_access_key=secret_key)
 
-try:
-    s3_client.head_bucket(Bucket=bucketname)
-
-except ClientError:
-    # The bucket does not exist or you have no access.
-    print("This bucket does not exist or you are missing permissions!")
+# try:
+#     s3_client.head_bucket(Bucket=bucketname)
+#
+# except ClientError:
+#     # The bucket does not exist or you have no access.
+#     print("This bucket does not exist or you are missing permissions!")
 
 # Name of file to be uploaded
 filename = sys.argv[2]
@@ -42,7 +42,7 @@ sns_client = boto3.client('sns',
                           config=Config(signature_version='s3'))
 
 # this is standard AWS services call, using custom attributes to add Kafka endpoint information to the topic
-arn = sns_client.create_topic(Name=hash(bucketname + filename + push_endpoint),
+arn = sns_client.create_topic(Name=str(hash(bucketname + filename + push_endpoint)),
                               Attributes={"push-endpoint": push_endpoint})
 
 notification_conf = [{'Id': 'shtut',
@@ -70,4 +70,4 @@ for message in consumer_list:
     if message['s3']['bucket']['name'] == bucketname and message['object']['key'] == filename \
             and message['eventName'] == "ceph:ObjectSynced":
         site = message['x-amz-id-2']
-        print(f'Object {filename} put in {bucketname} successfully to site {site}')
+        print("Object "+ filename+" put in "+bucketname+" successfully to site "+site)
