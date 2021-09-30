@@ -33,7 +33,7 @@ s3_client = boto3.client('s3',
 # Name of file to be uploaded
 filename = sys.argv[2]
 # The Kafka endpoint from which we want to receive updates
-push_endpoint = sys.argv[3]
+push_endpoint = "http://" + sys.argv[3]
 
 sns_client = boto3.client('sns',
                           region_name="us-east-1",
@@ -58,7 +58,7 @@ s3_client.put_bucket_notification_configuration(Bucket=bucketname,
 # Create new Kafka consumer to listen to the message from Ceph
 consumer = KafkaConsumer(
     arn,
-    bootstrap_servers=push_endpoint,
+    bootstrap_servers=sys.argv[2],
     value_deserializer=lambda x: loads(x))
 
 # Put objects to the relevant bucket
