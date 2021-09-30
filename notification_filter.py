@@ -38,10 +38,20 @@ push_endpoint = "http://" + sys.argv[3]
 
 sns_client = boto3.client('sns',
                           region_name="us-east-1",
-                          endpoint_url=endpoint,
-                          aws_access_key_id=access_key,
-                          aws_secret_access_key=secret_key,
+                          endpoint_url= 'http://127.0.0.1:8000',
+                          aws_access_key_id='0555b35654ad1656d804',
+                          aws_secret_access_key='h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q==',
                           config=Config(signature_version='s3'))
+                          
+_sns_client = boto3.client('sns',
+                  region_name="us-east-1",
+                  endpoint_url= 'http://127.0.0.1:8000',
+                  aws_access_key_id='0555b35654ad1656d804',
+                  aws_secret_access_key='h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q==',
+                  config=Config(signature_version='s3'))
+                  
+arn = _sns_client.create_topic(Name="test",
+  Attributes={"push-endpoint": push_endpoint})["TopicArn"]
 
 topic_name = base64.b16encode((bucketname + filename + push_endpoint).encode()).decode("utf-8")
 
@@ -72,6 +82,7 @@ print("Listening on: " + topic_name)
 
 for msg in consumer:
     message = msg.value
+    print(message)
     if message['s3']['bucket']['name'] == bucketname and message["s3"]['object']['key'] == filename \
             and message['eventName'] == "ceph:ObjectSynced":
         site = message['x-amz-id-2']
