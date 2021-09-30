@@ -4,6 +4,7 @@ from botocore.client import Config
 from json import loads
 from kafka import KafkaConsumer
 import threading
+import time
 import base64
 
 class SyncLibrary:
@@ -25,17 +26,18 @@ class SyncLibrary:
     def _spin(self, consumer, bucketname, key, timeout, max_zones):
         for msg in consumer:
             message = msg.value
-            print(message)
             if message['s3']['bucket']['name'] == bucketname and message["s3"]['object']['key'] == key \
                     and message['eventName'] == "ceph:ObjectSynced":
                 self._objects[key][0]+= 1
                 if self._objects[key][0] >= max_zones:
                     self._update_object_status(key, "success")
-                    return
+                    break
+        consumer.close()
     
     
-    def _timeout(self, key, thread, timeout):
+    def _timeout(self, consumer, key, thread, timeout):
         thread.join(timeout)
+        consumer.close()
         if self.get_replication_status(key) == "pending":
             self._update_object_status(key, "failed")
     
@@ -88,7 +90,7 @@ class SyncLibrary:
         thread.start()
         
         if timeout >= 0:
-            timeout_thread = threading.Thread(target=lambda: self._timeout(object_key, thread, timeout), daemon=True)
+            timeout_thread = threading.Thread(target=lambda: self._timeout(consumer, object_key, thread, timeout), daemon=True)
             timeout_thread.start()
             
         # Put objects to the relevant bucket

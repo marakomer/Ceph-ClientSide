@@ -5,7 +5,7 @@ library = sync_library.SyncLibrary(rgw_endpoint="http://127.0.0.1:8000", kafka_e
 
 library.set_replication_callback("trial.jpg", lambda status: print("hello: " + status))
 
-library.upload_file("mybucket", "trial.jpg", zones=2, timeout=2000)
+library.upload_file("mybucket", "trial.jpg", zones=1, timeout=2)
 
 while True:
     pass
