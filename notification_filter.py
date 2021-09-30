@@ -45,8 +45,7 @@ sns_client = boto3.client('sns',
 # this is standard AWS services call, using custom attributes to add Kafka endpoint information to the topic
 arn = sns_client.create_topic(Name=str(hash(bucketname + filename + push_endpoint)),
                               Attributes={"push-endpoint": push_endpoint})["TopicArn"]
-print(arn)
-
+                              
 notification_conf = [{'Id': 'shtut',
                       'TopicArn': arn,
                       'Events': ['s3:ObjectSynced:*']
