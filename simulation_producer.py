@@ -7,11 +7,11 @@ endpoint = '127.0.0.1:8000'
 access_key = '0555b35654ad1656d804'
 secret_key = 'h7GhxuBLTrlhVUyxSPUKUV8r/2EI4ngqJxD7iBdBYLhwluN30JaT3Q=='
 
-producer = KafkaProducer(bootstrap_servers=endpoint,
+push_endpoint = '127.0.0.1:9092'
+producer = KafkaProducer(bootstrap_servers=push_endpoint,
                          value_serializer=lambda x:
-                         dumps(x))
+                         dumps(x).encode('utf-8'))
 
-push_endpoint = ''
 data = {
     "eventVersion": "2.1",
     "eventSource": "aws:s3",
@@ -23,7 +23,7 @@ data = {
         "s3SchemaVersion": "1.0",
         "configurationId": "notification-id",
         "bucket": {
-            "name": "456",
+            "name": "mybucket",
             "ownerIdentity": {
                 "principalId": ""
             },
@@ -31,7 +31,7 @@ data = {
             "id": ""
         },
         "object": {
-            "key": "123.jpg",
+            "key": "trial.jpg",
             "eTag": "132",
             "versionId": "144",
             "sequencer": "156",
@@ -41,4 +41,5 @@ data = {
     "opaqueData": "564"
 }
 
-producer.send(push_endpoint, data)
+producer.send("6D796275636B6574747269616C2E6A7067687474703A2F2F3132372E302E302E313A39303932", data)
+producer.flush()

@@ -5,6 +5,7 @@ import sys
 from json import loads
 from kafka import KafkaConsumer
 from botocore.client import ClientError
+import base64
 
 if len(sys.argv) != 4:
     print('Usage: ' + sys.argv[0] + ' <bucket> <filename> <kafka endpoint>')
@@ -42,8 +43,10 @@ sns_client = boto3.client('sns',
                           aws_secret_access_key=secret_key,
                           config=Config(signature_version='s3'))
 
+topic_name = base64.b16encode((bucketname + filename + push_endpoint).encode()).decode("utf-8")
+
 # this is standard AWS services call, using custom attributes to add Kafka endpoint information to the topic
-arn = sns_client.create_topic(Name=str(hash(bucketname + filename + push_endpoint)),
+arn = sns_client.create_topic(Name=topic_name,
                               Attributes={"push-endpoint": push_endpoint})["TopicArn"]
                               
 notification_conf = [{'Id': 'shtut',
@@ -57,18 +60,19 @@ s3_client.put_bucket_notification_configuration(Bucket=bucketname,
 
 # Create new Kafka consumer to listen to the message from Ceph
 consumer = KafkaConsumer(
-    arn,
-    bootstrap_servers=sys.argv[2],
-    value_deserializer=lambda x: loads(x))
-
+    topic_name,
+    bootstrap_servers=sys.argv[3],
+    value_deserializer=lambda x: loads(x.decode("utf-8")))
+    
 # Put objects to the relevant bucket
 ans = s3_client.upload_file(Filename=filename, Bucket=bucketname,
                             Key=filename)
 
-consumer_list = [message.value for message in consumer]
+print("Listening on: " + topic_name)
 
-for message in consumer_list:
-    if message['s3']['bucket']['name'] == bucketname and message['object']['key'] == filename \
+for msg in consumer:
+    message = msg.value
+    if message['s3']['bucket']['name'] == bucketname and message["s3"]['object']['key'] == filename \
             and message['eventName'] == "ceph:ObjectSynced":
         site = message['x-amz-id-2']
         print("Object "+ filename+" put in "+bucketname+" successfully to site "+site)
