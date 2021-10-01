@@ -8,17 +8,20 @@ import time
 import base64
 
 class SyncLibrary:
-    def __init__(self, *, rgw_endpoint, kafka_endpoint, access_key, secret_key, region_name):
-        self._s3_client = boto3.client('s3',
-                          endpoint_url=rgw_endpoint,
-                          aws_access_key_id=access_key,
-                          aws_secret_access_key=secret_key)        
-        self._sns_client = boto3.client('sns',
-                          region_name=region_name,
-                          endpoint_url=rgw_endpoint,
-                          aws_access_key_id=access_key,
-                          aws_secret_access_key=secret_key,
-                          config=Config(signature_version='s3'))
+    def __init__(self, *, rgw_endpoints, kafka_endpoint, access_key, secret_key, region_name):
+        self._s3_clients = {}
+        self._sns_clients = {}
+        for zone in rgw_endpoints:
+            self._s3_clients[zone] = boto3.client('s3',
+                              endpoint_url=rgw_endpoints[zone],
+                              aws_access_key_id=access_key,
+                              aws_secret_access_key=secret_key)        
+            self._sns_clients[zone] = boto3.client('sns',
+                              region_name=region_name,
+                              endpoint_url=rgw_endpoints[zone],
+                              aws_access_key_id=access_key,
+                              aws_secret_access_key=secret_key,
+                              config=Config(signature_version='s3'))
         self._kafka_endpoint = kafka_endpoint
         
         self._objects = {}
@@ -61,22 +64,23 @@ class SyncLibrary:
             return None
         return self._objects[object_key][1]
     
-    def upload_file(self, bucket_name, file_name, object_key=None, *, timeout=-1, zones=0):
+    def upload_file(self, zone_name, bucket_name, file_name, object_key=None, *, timeout=-1, zones=0):
         if not object_key:
             object_key = file_name
     
         topic_name = base64.b16encode((bucket_name + file_name + self._kafka_endpoint).encode()).decode("utf-8")
-        arn = self._sns_client.create_topic(Name=topic_name,
-                              Attributes={"push-endpoint": "http://" + self._kafka_endpoint})["TopicArn"]
-                              
-        notification_conf = [{'Id': 'sync-library',
-                              'TopicArn': arn,
-                              'Events': ['s3:ObjectSynced:*']
-                              }]
+        for zone in self._s3_clients:
+            arn = self._sns_clients[zone].create_topic(Name=topic_name,
+                                  Attributes={"push-endpoint": "http://" + self._kafka_endpoint})["TopicArn"]
+                                  
+            notification_conf = [{'Id': 'sync-library',
+                                  'TopicArn': arn,
+                                  'Events': ['s3:ObjectSynced:*']
+                                  }]
 
-        self._s3_client.put_bucket_notification_configuration(Bucket=bucket_name,
-                                                        NotificationConfiguration={
-                                                            'TopicConfigurations': notification_conf})
+            self._s3_clients[zone].put_bucket_notification_configuration(Bucket=bucket_name,
+                                                            NotificationConfiguration={
+                                                                'TopicConfigurations': notification_conf})
 
         # Create new Kafka consumer to listen to the message from Ceph
         consumer = KafkaConsumer(
@@ -94,5 +98,5 @@ class SyncLibrary:
             timeout_thread.start()
             
         # Put objects to the relevant bucket
-        ans = self._s3_client.upload_file(Filename=file_name, Bucket=bucket_name,
+        ans = self._s3_clients[zone_name].upload_file(Filename=file_name, Bucket=bucket_name,
                                     Key=object_key)
